@@ -1,0 +1,369 @@
+<!DOCTYPE html>  
+<html lang="de">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Sudoku Spiel</title>  
+    <style>  
+        body {  
+            font-family: Arial, sans-serif;  
+            text-align: center;  
+            margin: 0;  
+            padding: 0;  
+        }  
+        .container {  
+    display: flex;  
+    flex-direction: column;  
+    align-items: center;  
+    justify-content: center;  
+    height: 100vh;  
+    padding: 20px;  
+}  
+.sudoku-grid {  
+    display: grid;  
+    grid-template-columns: repeat(9, 1fr);  
+    grid-template-rows: repeat(9, 1fr);  
+    width: 90vmin;  
+    height: 90vmin;  
+    border: 4px solid black; /* Äußere Umrandung */  
+    box-sizing: border-box;  
+}  
+  
+.cell {  
+    display: flex;  
+    justify-content: center;  
+    align-items: center;  
+    border: 1px solid #ccc;  
+    width: 100%;  
+    height: 100%;  
+    aspect-ratio: 1 / 1; /* Stellt sicher, dass jede Zelle quadratisch ist */  
+    box-sizing: border-box;  
+}  
+  
+/* Dicke Linien für die 3x3-Abschnitte */  
+.cell:nth-child(9n + 1) { border-left: 4px solid black; } /* Linke Begrenzung jeder Box */  
+.cell:nth-child(n + 1):nth-child(-n + 9) { border-top: 4px solid black; } /* Obere Begrenzung */  
+.cell:nth-child(9n) { border-right: 4px solid black; } /* Rechte Begrenzung */  
+.cell:nth-child(n + 73):nth-child(-n + 81) { border-bottom: 4px solid black; } /* Untere Begrenzung */  
+  
+/* Dünnere Linien für interne 3x3-Bereiche */  
+.cell:nth-child(3n) { border-right: 2px solid black; }  
+.cell:nth-child(n + 19):nth-child(-n + 27),  
+.cell:nth-child(n + 46):nth-child(-n + 54) { border-bottom: 2px solid black; }  
+        .cell input {  
+            width: 100%;  
+            height: 100%;  
+            text-align: center;  
+            font-size: 2em;  
+            border: none;  
+            outline: none;  
+            background-color: transparent;  
+        }  
+        .fixed {  
+    font-weight: bold;  
+    color: black;  
+    font-size: 2em; /* Gleiche Größe wie input */  
+    display: flex;  
+    align-items: center;  
+    justify-content: center;  
+    height: 100%; /* Stellt sicher, dass es nicht größer wird */  
+    width: 100%;  
+}  
+        .user-input {  
+            color: blue;  
+            font-weight: normal;  
+        }  
+        .error {  
+            background-color: rgba(255, 0, 0, 0.5);  
+        }  
+        .button {  
+            margin-top: 40px;  
+            padding: 15px 15px;  
+            font-size: 1.5em;  
+            background-color: #4CAF50;  
+            color: white;  
+            border: none;  
+            cursor: pointer;  
+            width: 75%;  
+        }  
+        .button:hover {  
+            background-color: #45a049;  
+        }  
+          
+.custom-confirm {  
+    position: fixed;  
+    top: 0;  
+    left: 0;  
+    width: 100%;  
+    height: 100%;  
+    background: rgba(0, 0, 0, 0.5);  
+    display: flex;  
+    align-items: center;  
+    justify-content: center;  
+    display: none;
+    align-items: flex-start;  
+}  
+  
+.custom-confirm-content {  
+    background: white;  
+    padding: 20px;  
+    border-radius: 10px;  
+    text-align: center;  
+    font-size: 1.5em;  
+    box-shadow: 0px 0px 10px gray;  
+}  
+  
+.custom-confirm-content button {  
+    margin: 10px;  
+    padding: 10px 20px;  
+    font-size: 1em;  
+    border: none;  
+    cursor: pointer;  
+}  
+  
+.custom-confirm-content button:first-of-type {  
+    background: green;  
+    color: white;  
+}  
+  
+.custom-confirm-content button:last-of-type {  
+    background: red;  
+    color: white;  
+}  
+    </style>  
+</head>  
+<body>  
+    <div class="container">  
+        <h1>Wolfgangs Sudoku</h1>  
+        <div class="sudoku-grid" id="sudokuGrid"></div>  
+        <button class="button" onclick="generateSudoku()">Neues Sudoku</button>  
+        <button class="button" onclick="checkSolution()">Prüfen</button>  
+    </div>  
+  <div id="customConfirm" class="custom-confirm">
+    <div class="custom-confirm-content">
+        <p id="confirmMessage"></p>
+        <button onclick="closeCustomConfirm(true)">OK</button>
+        <button onclick="closeCustomConfirm(false)">Abbrechen</button>
+    </div>
+</div>
+    <script>  
+        let solution = [];  
+  
+        function generateSudoku() {  
+            const grid = document.getElementById('sudokuGrid');  
+            grid.innerHTML = '';  
+            const sudoku = generateFullSudoku();  
+            solution = [...sudoku];  
+            const puzzle = removeNumbers(sudoku, 40);  
+  
+            for (let i = 0; i < 81; i++) {  
+                const cell = document.createElement('div');  
+                cell.className = 'cell';  
+  
+                if (puzzle[i] !== 0) {  
+                    cell.textContent = puzzle[i];  
+                    cell.classList.add('fixed');  
+                } else {  
+                    const input = document.createElement('input');  
+                    input.type = 'tel'; // Öffnet ein Zahlenfeld mit Ziffernblock
+input.inputMode = 'numeric'; // Stellt sicher, dass nur Zahlen erlaubt sind
+                    input.maxLength = 1;  
+                    input.classList.add('user-input');  
+                    input.dataset.index = i;  
+                    input.oninput = (e) => {
+    let value = e.target.value.replace(/[^1-9]/g, ""); // Nur 1-9 erlauben
+    let index = parseInt(e.target.dataset.index);
+
+    if (value && !isValidPlacement(index, parseInt(value))) {
+        showCustomConfirm("Ungültige Eingabe! Diese Zahl gibt es bereits.", () => {
+            e.target.value = ""; // Löscht ungültige Eingabe
+            e.target.blur(); // Schließt Tastatur
+        });
+    } else {
+        e.target.value = value;
+        e.target.blur(); // Schließt Tastatur nach Eingabe
+    }
+};
+        
+                    cell.appendChild(input);  
+                }  
+                grid.appendChild(cell);  
+            }  
+        }  
+  
+        function validateInput(input) {  
+    const index = parseInt(input.dataset.index); // Index muss als Zahl vorliegen  
+    const value = input.value;  
+    input.classList.remove('error');  
+  
+    if (value === '') return;  
+  
+    if (!isValidPlacement(index, parseInt(value))) {  
+        input.classList.add('error'); // Fehlerhafte Eingabe markieren  
+    }  
+}  
+  
+        function isValidPlacement(index, num) {  
+    const row = Math.floor(index / 9);  
+    const col = index % 9;  
+    const grid = document.getElementById('sudokuGrid').children;  
+  
+    for (let i = 0; i < 9; i++) {  
+        // Zeilenprüfung  
+        if (getCellValue(grid[row * 9 + i]) == num && i !== col) {  
+            return false;  
+        }  
+        // Spaltenprüfung  
+        if (getCellValue(grid[i * 9 + col]) == num && i !== row) {  
+            return false;  
+        }  
+    }  
+  
+    // 3x3-Blockprüfung  
+    const startRow = Math.floor(row / 3) * 3;  
+    const startCol = Math.floor(col / 3) * 3;  
+    for (let i = startRow; i < startRow + 3; i++) {  
+        for (let j = startCol; j < startCol + 3; j++) {  
+            const cellIndex = i * 9 + j;  
+            if (getCellValue(grid[cellIndex]) == num && cellIndex !== index) {  
+                return false;  
+            }  
+        }  
+    }  
+  
+    return true;  
+}  
+  
+// Hilfsfunktion, um den Wert einer Zelle zu erhalten (egal ob feste oder eingegebene Zahl)  
+function getCellValue(cell) {  
+    return cell.classList.contains('fixed') ? cell.textContent.trim() : cell.querySelector('input')?.value.trim();  
+}  
+  
+        function checkSolution() {  
+    let allCorrect = true;  
+    document.querySelectorAll('.sudoku-grid input').forEach(input => {  
+        const index = parseInt(input.dataset.index);  
+        const userValue = input.value;  
+  
+        // Entferne alle vorherigen Fehler-Markierungen  
+        input.classList.remove('error');  
+  
+        if (userValue !== solution[index].toString() || !isValidPlacement(index, parseInt(userValue))) {  
+            input.classList.add('error'); // Fehlerhafte Eingabe markieren  
+            allCorrect = false;  
+        }  
+    });  
+  
+    if (allCorrect) {  
+        
+showCustomConfirm("Geschafft!", function(result) {  
+    if (result) {  
+        console.log("Benutzer hat OK geklickt");  
+    } else {  
+        console.log("Benutzer hat Abbrechen geklickt");  
+    }  
+});
+    } else {  
+        //alert("Spr 25,2 Gottes Ehre ist es, eine Sache zu verbergen, die Ehre der Könige aber, eine Sache zu erforschen.");
+        
+        showCustomConfirm("Spr 25,2 Gottes Ehre ist es, eine Sache zu verbergen, die Ehre der Könige aber, eine Sache zu erforschen.", function(result) {  
+    if (result) {  
+        console.log("Benutzer hat OK geklickt");  
+    } else {  
+        console.log("Benutzer hat Abbrechen geklickt");  
+    }  
+});
+
+
+    }  
+}  
+  
+        function generateFullSudoku() {  
+            const board = Array(81).fill(0);  
+            fillBoard(board);  
+            return board;  
+        }  
+  
+        function fillBoard(board) {  
+            const emptyCells = getEmptyCells(board);  
+            if (emptyCells.length === 0) return true;  
+  
+            const [row, col] = emptyCells.pop();  
+            const numbers = shuffleArray([1, 2, 3, 4, 5, 6, 7, 8, 9]);  
+  
+            for (let num of numbers) {  
+                if (isValidMove(board, row, col, num)) {  
+                    board[row * 9 + col] = num;  
+                    if (fillBoard(board)) {  
+                        return true;  
+                    }  
+                    board[row * 9 + col] = 0;  
+                }  
+            }  
+            return false;  
+        }  
+  
+        function getEmptyCells(board) {  
+            const emptyCells = [];  
+            for (let row = 0; row < 9; row++) {  
+                for (let col = 0; col < 9; col++) {  
+                    if (board[row * 9 + col] === 0) {  
+                        emptyCells.push([row, col]);  
+                    }  
+                }  
+            }  
+            return emptyCells;  
+        }  
+  
+        function isValidMove(board, row, col, num) {  
+            for (let i = 0; i < 9; i++) {  
+                if (board[row * 9 + i] === num || board[i * 9 + col] === num) {  
+                    return false;  
+                }  
+            }  
+            const startRow = Math.floor(row / 3) * 3;  
+            const startCol = Math.floor(col / 3) * 3;  
+            for (let i = startRow; i < startRow + 3; i++) {  
+                for (let j = startCol; j < startCol + 3; j++) {  
+                    if (board[i * 9 + j] === num) {  
+                        return false;  
+                    }  
+                }  
+            }  
+            return true;  
+        }  
+  
+        function shuffleArray(arr) {  
+            for (let i = arr.length - 1; i > 0; i--) {  
+                const j = Math.floor(Math.random() * (i + 1));  
+                [arr[i], arr[j]] = [arr[j], arr[i]];  
+            }  
+            return arr;  
+        }  
+  
+        function removeNumbers(board, count) {  
+            const puzzle = [...board];  
+            let removed = 0;  
+            while (removed < count) {  
+                const index = Math.floor(Math.random() * 81);  
+                if (puzzle[index] !== 0) {  
+                    puzzle[index] = 0;  
+                    removed++;  
+                }  
+            }  
+            return puzzle;  
+        }  
+          
+function showCustomConfirm(message, callback) {  
+document.activeElement.blur();
+    document.getElementById("confirmMessage").textContent = message;  
+    document.getElementById("customConfirm").style.display = "flex";  
+  
+    window.closeCustomConfirm = function (result) {  
+        document.getElementById("customConfirm").style.display = "none";  
+        if (callback) callback(result);  
+    };  
+}  
+    </script>  
+</body>  
+</html>
